@@ -1,109 +1,133 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Button } from '@/components/ui/button';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { 
+  Activity, 
+  Users, 
+  BellRing, 
+  LineChart, 
+  MessageSquare, 
+  Settings, 
+  LogOut,
+  Menu,
+  X
+} from 'lucide-react';
 
 const navItems = [
-  { href: '/doctor', label: 'Patients', icon: '👥' },
-  { href: '/doctor?tab=alerts', label: 'Alerts', icon: '🚨' },
-  { href: '/doctor?tab=analytics', label: 'Analytics', icon: '📊' },
-  { href: '/doctor?tab=messages', label: 'Messages', icon: '💬' },
+  { href: '/doctor', tab: null, label: 'Patients roster', icon: <Users size={20} /> },
+  { href: '/doctor?tab=alerts', tab: 'alerts', label: 'Alerts feed', icon: <BellRing size={20} /> },
+  { href: '/doctor?tab=analytics', tab: 'analytics', label: 'Analytics', icon: <LineChart size={20} /> },
+  { href: '/doctor?tab=messages', tab: 'messages', label: 'Messages', icon: <MessageSquare size={20} /> },
 ];
 
-export function DoctorSidebar() {
-  const [isOpen, setIsOpen] = useState(false);
+// 1. Extract the navigation logic into a sub-component to safely use useSearchParams
+function SidebarLinks({ closeSidebar }: { closeSidebar: () => void }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get('tab');
 
-  const isActive = (href: string) => {
-    if (href === '/doctor') {
-      return pathname === '/doctor';
-    }
-    return pathname === '/doctor';
+  const isActive = (itemTab: string | null) => {
+    if (pathname !== '/doctor') return false;
+    return currentTab === itemTab;
   };
 
   return (
+    <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+      <p className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 mt-2">Main Menu</p>
+      {navItems.map((item) => {
+        const active = isActive(item.tab);
+        return (
+          <Link key={item.href} href={item.href} onClick={closeSidebar}>
+            <div
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                active
+                  ? 'bg-teal-50 text-teal-700 font-bold'
+                  : 'text-slate-600 font-medium hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              <div className={`${active ? 'text-teal-600' : 'text-slate-400'}`}>
+                {item.icon}
+              </div>
+              {item.label}
+              {item.tab === 'messages' && !active && (
+                <span className="ml-auto w-2 h-2 rounded-full bg-teal-500"></span>
+              )}
+            </div>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+// 2. Main Sidebar Component
+export function DoctorSidebar() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
     <>
-      {/* Mobile Hamburger Button */}
+      {/* Mobile Hamburger Button - Bumped to z-[60] so it's always on top */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 left-4 z-40 p-2 rounded-lg bg-primary text-white"
+        className="lg:hidden fixed top-4 left-4 z-[60] p-2.5 rounded-xl bg-slate-900 text-white shadow-lg border border-slate-700 transition-transform active:scale-95"
       >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d={isOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'}
-          />
-        </svg>
+        {isOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
-      {/* Overlay for mobile */}
+      {/* Overlay for mobile - Set strictly to z-40 */}
       {isOpen && (
-        <div className="lg:hidden fixed inset-0 bg-black/50 z-30" onClick={() => setIsOpen(false)} />
+        <div 
+          className="lg:hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 transition-opacity" 
+          onClick={() => setIsOpen(false)} 
+        />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - Set strictly to z-50 and added shrink-0 */}
       <aside
-        className={`fixed lg:static top-0 left-0 h-screen w-64 bg-sidebar border-r border-border transition-transform duration-300 z-30 lg:z-0 ${
+        className={`fixed lg:sticky top-0 left-0 h-screen w-[280px] shrink-0 bg-white border-r border-slate-200 transition-transform duration-300 ease-in-out z-50 flex flex-col ${
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="p-6 border-b border-border">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-lg">
-                🏥
-              </div>
-              <h1 className="text-xl font-bold text-sidebar-foreground">CareBridge</h1>
-            </Link>
-          </div>
+        {/* Header & Logo */}
+        <div className="p-6">
+          <Link href="/" className="flex items-center gap-2 text-teal-600">
+            <Activity size={28} strokeWidth={2.5} />
+            <h1 className="text-xl font-extrabold tracking-tight text-slate-900">CareBridge</h1>
+          </Link>
+        </div>
 
-          {/* User Profile Card */}
-          <div className="p-6 border-b border-border">
-            <div className="space-y-3">
-              <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-lg">
-                👨‍⚕️
-              </div>
-              <div>
-                <p className="font-semibold text-sidebar-foreground">Dr. Michael Smith</p>
-                <p className="text-sm text-muted-foreground">Cardiologist</p>
-              </div>
+        {/* Doctor Profile Snippet */}
+        <div className="px-6 pb-6">
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100">
+            <div className="w-10 h-10 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-sm">
+              MS
+            </div>
+            <div>
+              <p className="font-bold text-sm text-slate-900 leading-tight">Dr. Michael Smith</p>
+              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Orthopedics</p>
             </div>
           </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 px-3 py-6 space-y-2">
-            {navItems.map((item) => (
-              <Link key={item.href} href={item.href}>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    isActive(item.href)
-                      ? 'bg-sidebar-primary text-sidebar-primary-foreground'
-                      : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
-                  }`}
-                >
-                  <span className="text-lg">{item.icon}</span>
-                  <span className="font-medium">{item.label}</span>
-                </button>
-              </Link>
-            ))}
-          </nav>
-
-          {/* Footer */}
-          <div className="p-6 border-t border-border space-y-3">
-            <Button variant="outline" className="w-full justify-start">
-              ⚙️ Settings
-            </Button>
-            <Button variant="outline" className="w-full justify-start text-red-600">
-              🚪 Logout
-            </Button>
-          </div>
         </div>
+
+        {/* 3. Wrap the links in a Suspense boundary to prevent Next.js crashes */}
+        <Suspense fallback={<div className="flex-1 px-8 py-4 text-sm text-slate-400 font-medium">Loading menu...</div>}>
+          <SidebarLinks closeSidebar={() => setIsOpen(false)} />
+        </Suspense>
+
+        {/* Footer Actions */}
+        <div className="p-4 border-t border-slate-100 space-y-1">
+          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 font-medium hover:bg-slate-50 hover:text-slate-900 transition-colors">
+            <Settings size={20} className="text-slate-400" />
+            Settings
+          </button>
+          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 font-medium hover:bg-red-50 transition-colors">
+            <LogOut size={20} className="text-red-400" />
+            Sign Out
+          </button>
+        </div>
+        
       </aside>
     </>
   );
